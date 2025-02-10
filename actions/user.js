@@ -62,8 +62,16 @@ export async function updateUser(data) {
     revalidatePath("/");
     return result.user;
   } catch (error) {
-    console.error("Error updating user and industry:", error.message);
-    throw new Error("Failed to update profile");
+    if (error.code === "P2002") {
+      console.error(`Error updating user and industry: ${error.message}. Please check for duplicate entries.`);
+      throw new Error(`Failed to update profile: Duplicate entry found`);
+    } else if (error.code === "P2025") {
+      console.error(`Error updating user and industry: ${error.message}. Please check for missing relations.`);
+      throw new Error(`Failed to update profile: Missing relation found`);
+    } else {
+      console.error(`Error updating user and industry: ${error.message}. Please check your API key and ensure it is valid.`);
+      throw new Error(`Failed to update profile: ${error.message}`);
+    }
   }
 }
 
