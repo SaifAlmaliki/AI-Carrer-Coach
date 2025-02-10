@@ -1,3 +1,5 @@
+// Server actions for managing user data, including updating user profiles and checking onboarding status.
+
 "use server";
 
 import { db } from "@/lib/prisma";
@@ -5,10 +7,16 @@ import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { generateAIInsights } from "./dashboard";
 
+/**
+ * Updates user profile information, including industry, experience, bio, and skills.
+ * Also handles the creation of industry insights if they don't already exist.
+ */
 export async function updateUser(data) {
+  // Authenticate the user.
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
+  // Retrieve the user from the database.
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
   });
@@ -16,21 +24,21 @@ export async function updateUser(data) {
   if (!user) throw new Error("User not found");
 
   try {
-    // Start a transaction to handle both operations
+    // Use a transaction to ensure atomicity of operations.
     const result = await db.$transaction(
       async (tx) => {
-        // First check if industry exists
+        // Check if industry insights already exist.
         let industryInsight = await tx.industryInsight.findUnique({
           where: {
             industry: data.industry,
           },
         });
 
-        // If industry doesn't exist, create it with default values
+        // If industry insights don't exist, generate and create them.
         if (!industryInsight) {
           const insights = await generateAIInsights(data.industry);
 
-          industryInsight = await db.industryInsight.create({
+          industryInsight = await tx.industryInsight.create({
             data: {
               industry: data.industry,
               ...insights,
@@ -39,7 +47,7 @@ export async function updateUser(data) {
           });
         }
 
-        // Now update the user
+        // Update the user's profile information.
         const updatedUser = await tx.user.update({
           where: {
             id: user.id,
@@ -52,6 +60,7 @@ export async function updateUser(data) {
           },
         });
 
+        // Return the updated user and industry insight.
         return { updatedUser, industryInsight };
       },
       {
@@ -59,9 +68,11 @@ export async function updateUser(data) {
       }
     );
 
+    // Revalidate the path to update the cache.
     revalidatePath("/");
-    return result.user;
+    return result.updatedUser;
   } catch (error) {
+    // Handle specific error codes from Prisma.
     if (error.code === "P2002") {
       console.error(`Error updating user and industry: ${error.message}. Please check for duplicate entries.`);
       throw new Error(`Failed to update profile: Duplicate entry found`);
@@ -69,16 +80,21 @@ export async function updateUser(data) {
       console.error(`Error updating user and industry: ${error.message}. Please check for missing relations.`);
       throw new Error(`Failed to update profile: Missing relation found`);
     } else {
+      // Generic error handling.
       console.error(`Error updating user and industry: ${error.message}. Please check your API key and ensure it is valid.`);
       throw new Error(`Failed to update profile: ${error.message}`);
     }
   }
 }
 
+
+// Retrieves the onboarding status of a user.
 export async function getUserOnboardingStatus() {
+  // Authenticate the user.
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
+  // Retrieve the user from the database.
   const user = await db.user.findUnique({
     where: { clerkUserId: userId },
   });
@@ -86,6 +102,7 @@ export async function getUserOnboardingStatus() {
   if (!user) throw new Error("User not found");
 
   try {
+    // Retrieve the user with only the industry field.
     const user = await db.user.findUnique({
       where: {
         clerkUserId: userId,
@@ -95,10 +112,12 @@ export async function getUserOnboardingStatus() {
       },
     });
 
+    // Determine if the user is onboarded based on the existence of an industry.
     return {
       isOnboarded: !!user?.industry,
     };
   } catch (error) {
+    // Handle errors during onboarding status check.
     console.error("Error checking onboarding status:", error);
     throw new Error("Failed to check onboarding status");
   }

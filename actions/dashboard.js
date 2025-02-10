@@ -1,3 +1,8 @@
+/**
+ * This file contains server actions for fetching and generating industry insights for the user's dashboard.
+ * It uses Google's Gemini AI model to generate insights if they don't already exist in the database.
+ */
+
 "use server";
 
 import { db } from "@/lib/prisma";
@@ -9,24 +14,28 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export const generateAIInsights = async (industry) => {
   const prompt = `
-          Analyze the current state of the ${industry} industry and provide insights in ONLY the following JSON format without any additional notes or explanations:
-          {
-            "salaryRanges": [
-              { "role": "string", "min": number, "max": number, "median": number, "location": "string" }
-            ],
-            "growthRate": number,
-            "demandLevel": "High" | "Medium" | "Low",
-            "topSkills": ["skill1", "skill2"],
-            "marketOutlook": "Positive" | "Neutral" | "Negative",
-            "keyTrends": ["trend1", "trend2"],
-            "recommendedSkills": ["skill1", "skill2"]
-          }
-          
-          IMPORTANT: Return ONLY the JSON. No additional text, notes, or markdown formatting.
-          Include at least 5 common roles for salary ranges.
-          Growth rate should be a percentage.
-          Include at least 5 skills and trends.
-        `;
+  Analyze the current state of the ${industry} industry and provide structured insights strictly in the following JSON format without any additional text, notes, or explanations:
+
+  {
+    "salaryRanges": [
+      { "role": "string", "min": number, "max": number, "median": number, "location": "string" }
+    ],
+    "growthRate": number,
+    "demandLevel": "High" | "Medium" | "Low",
+    "topSkills": ["skill1", "skill2", "skill3", "skill4", "skill5"],
+    "marketOutlook": "Positive" | "Neutral" | "Negative",
+    "keyTrends": ["trend1", "trend2", "trend3", "trend4", "trend5"],
+    "recommendedSkills": ["skill1", "skill2", "skill3", "skill4", "skill5"]
+  }
+
+  STRICT REQUIREMENTS:
+  - Return ONLY valid JSON. No additional explanations, notes, markdown formatting, or extraneous characters.
+  - Include salary ranges for at least 5 commonly found roles in this industry.
+  - Ensure the growthRate value is expressed as a percentage.
+  - The lists (topSkills, keyTrends, recommendedSkills) must contain at least 5 relevant entries each.
+
+  Failure to follow these instructions exactly will result in incorrect output.
+`;
 
   const result = await model.generateContent(prompt);
   const response = result.response;
@@ -36,7 +45,12 @@ export const generateAIInsights = async (industry) => {
   return JSON.parse(cleanedText);
 };
 
+/**
+ * Fetches industry insights for the current user.
+ * If no insights exist, it generates them using the Gemini AI model.
+ */
 export async function getIndustryInsights() {
+  // Get the user ID from the authentication context.
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
