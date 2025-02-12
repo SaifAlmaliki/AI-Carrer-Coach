@@ -1,15 +1,24 @@
+/**
+ * Quiz Component
+ *
+ * A dynamic quiz interface that presents AI-generated technical interview questions.
+ * This component handles the complete quiz flow including:
+ * - Quiz generation based on user's industry and skills
+ * - Question presentation and answer collection
+ * - Real-time feedback with explanations
+ * - Score calculation and result saving
+ * - Progress tracking and navigation
+ *
+ * The component uses custom hooks for data fetching and maintains local state
+ * for quiz progression and user interactions.
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { generateQuiz, saveQuizResult } from "@/actions/interview";
@@ -18,35 +27,30 @@ import useFetch from "@/hooks/use-fetch";
 import { BarLoader } from "react-spinners";
 
 export default function Quiz() {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState([]);
-  const [showExplanation, setShowExplanation] = useState(false);
+  // State management for quiz progression and user interactions
+  const [currentQuestion, setCurrentQuestion] = useState(0);      // Tracks current question index
+  const [answers, setAnswers] = useState([]);                     // Stores user's answers
+  const [showExplanation, setShowExplanation] = useState(false);  // Controls explanation visibility
 
-  const {
-    loading: generatingQuiz,
-    fn: generateQuizFn,
-    data: quizData,
-  } = useFetch(generateQuiz);
+  // Custom hooks for handling async operations
+  const { loading: generatingQuiz, fn: generateQuizFn, data: quizData } = useFetch(generateQuiz);
+  const { loading: savingResult, fn: saveQuizResultFn, data: resultData, setData: setResultData } = useFetch(saveQuizResult);
 
-  const {
-    loading: savingResult,
-    fn: saveQuizResultFn,
-    data: resultData,
-    setData: setResultData,
-  } = useFetch(saveQuizResult);
-
+  // Initialize answers array when quiz data is loaded
   useEffect(() => {
     if (quizData) {
       setAnswers(new Array(quizData.length).fill(null));
     }
   }, [quizData]);
 
+  // Handler for when user selects an answer
   const handleAnswer = (answer) => {
     const newAnswers = [...answers];
     newAnswers[currentQuestion] = answer;
     setAnswers(newAnswers);
   };
 
+  // Handler for navigating to next question or finishing quiz
   const handleNext = () => {
     if (currentQuestion < quizData.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
@@ -56,6 +60,7 @@ export default function Quiz() {
     }
   };
 
+  // Calculate the final score as a percentage
   const calculateScore = () => {
     let correct = 0;
     answers.forEach((answer, index) => {
@@ -66,6 +71,7 @@ export default function Quiz() {
     return (correct / quizData.length) * 100;
   };
 
+  // Save quiz results and handle completion
   const finishQuiz = async () => {
     const score = calculateScore();
     try {
@@ -76,6 +82,7 @@ export default function Quiz() {
     }
   };
 
+  // Reset quiz state and generate new questions
   const startNewQuiz = () => {
     setCurrentQuestion(0);
     setAnswers([]);
@@ -84,11 +91,12 @@ export default function Quiz() {
     setResultData(null);
   };
 
+  // Loading state while generating quiz
   if (generatingQuiz) {
     return <BarLoader className="mt-4" width={"100%"} color="gray" />;
   }
 
-  // Show results if quiz is completed
+  // Show results screen after quiz completion
   if (resultData) {
     return (
       <div className="mx-2">
@@ -97,6 +105,7 @@ export default function Quiz() {
     );
   }
 
+  // Initial quiz start screen
   if (!quizData) {
     return (
       <Card className="mx-2">
@@ -118,8 +127,8 @@ export default function Quiz() {
     );
   }
 
+  // Main quiz interface
   const question = quizData[currentQuestion];
-
   return (
     <Card className="mx-2">
       <CardHeader>
@@ -127,7 +136,9 @@ export default function Quiz() {
           Question {currentQuestion + 1} of {quizData.length}
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-4">
+        {/* Question text and answer options */}
         <p className="text-lg font-medium">{question.question}</p>
         <RadioGroup
           onValueChange={handleAnswer}
@@ -142,6 +153,7 @@ export default function Quiz() {
           ))}
         </RadioGroup>
 
+        {/* Explanation section shown after answering */}
         {showExplanation && (
           <div className="mt-4 p-4 bg-muted rounded-lg">
             <p className="font-medium">Explanation:</p>
@@ -149,7 +161,9 @@ export default function Quiz() {
           </div>
         )}
       </CardContent>
+
       <CardFooter className="flex justify-between">
+        {/* Show explanation button */}
         {!showExplanation && (
           <Button
             onClick={() => setShowExplanation(true)}
@@ -159,11 +173,8 @@ export default function Quiz() {
             Show Explanation
           </Button>
         )}
-        <Button
-          onClick={handleNext}
-          disabled={!answers[currentQuestion] || savingResult}
-          className="ml-auto"
-        >
+        {/* Next/Finish button */}
+        <Button onClick={handleNext} disabled={!answers[currentQuestion] || savingResult} className="ml-auto">
           {savingResult && (
             <BarLoader className="mt-4" width={"100%"} color="gray" />
           )}
