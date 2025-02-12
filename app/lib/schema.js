@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+// Onboarding Schema
 export const onboardingSchema = z.object({
   industry: z.string({
     required_error: "Please select an industry",
@@ -27,6 +28,7 @@ export const onboardingSchema = z.object({
   ),
 });
 
+// Contact Schema
 export const contactSchema = z.object({
   email: z.string().email("Invalid email address"),
   mobile: z.string().optional(),
@@ -34,6 +36,7 @@ export const contactSchema = z.object({
   twitter: z.string().optional(),
 });
 
+// Entry Schema (for Experience, Education, Projects)
 export const entrySchema = z
   .object({
     title: z.string().min(1, "Title is required"),
@@ -56,6 +59,7 @@ export const entrySchema = z
     }
   );
 
+// Resume Schema
 export const resumeSchema = z.object({
   contactInfo: contactSchema,
   summary: z.string().min(1, "Professional summary is required"),
@@ -65,6 +69,7 @@ export const resumeSchema = z.object({
   projects: z.array(entrySchema),
 });
 
+// Cover Letter Schema
 export const coverLetterSchema = z.object({
   companyName: z.string().min(1, "Company name is required"),
   jobTitle: z.string().min(1, "Job title is required"),

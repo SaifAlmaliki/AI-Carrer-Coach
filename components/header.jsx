@@ -1,22 +1,9 @@
 import React from "react";
 import { Button } from "./ui/button";
-import {
-  PenBox,
-  LayoutDashboard,
-  FileText,
-  GraduationCap,
-  ChevronDown,
-  StarsIcon,
-} from "lucide-react";
+import { PenBox, LayoutDashboard, FileText, GraduationCap, ChevronDown, StarsIcon } from "lucide-react";
 import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import Image from "next/image";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { checkUser } from "@/lib/checkUser";
 
 export default async function Header() {
@@ -35,10 +22,7 @@ export default async function Header() {
         <div className="flex items-center space-x-2 md:space-x-4">
           <SignedIn>
             <Link href="/dashboard">
-              <Button
-                variant="outline"
-                className="hidden md:inline-flex items-center gap-2"
-              >
+              <Button variant="outline" className="hidden md:inline-flex items-center gap-2">
                 <LayoutDashboard className="h-4 w-4" />
                 Industry Insights
               </Button>

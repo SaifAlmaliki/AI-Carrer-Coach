@@ -1,35 +1,24 @@
+/**
+ * Dashboard View Component
+ *
+ * A comprehensive dashboard component that displays career and industry insights including:
+ * - Market overview metrics (outlook, growth, demand level, top skills)
+ * - Salary ranges visualization across different roles
+ * - Industry trends and recommended skills
+ */
+
 "use client";
 
 import React from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
-  BriefcaseIcon,
-  LineChart,
-  TrendingUp,
-  TrendingDown,
-  Brain,
-} from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BriefcaseIcon, LineChart, TrendingUp, TrendingDown, Brain } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 
 const DashboardView = ({ insights }) => {
-  // Transform salary data for the chart
+  // Transform salary data for the chart visualization
   const salaryData = insights.salaryRanges.map((range) => ({
     name: range.role,
     min: range.min / 1000,
@@ -37,6 +26,7 @@ const DashboardView = ({ insights }) => {
     median: range.median / 1000,
   }));
 
+  // Helper function to determine demand level indicator color
   const getDemandLevelColor = (level) => {
     switch (level.toLowerCase()) {
       case "high":
@@ -50,6 +40,7 @@ const DashboardView = ({ insights }) => {
     }
   };
 
+  // Helper function to get market outlook icon and color
   const getMarketOutlookInfo = (outlook) => {
     switch (outlook.toLowerCase()) {
       case "positive":
@@ -66,21 +57,22 @@ const DashboardView = ({ insights }) => {
   const OutlookIcon = getMarketOutlookInfo(insights.marketOutlook).icon;
   const outlookColor = getMarketOutlookInfo(insights.marketOutlook).color;
 
-  // Format dates using date-fns
+  // Format dates for display
   const lastUpdatedDate = format(new Date(insights.lastUpdated), "dd/MM/yyyy");
-  const nextUpdateDistance = formatDistanceToNow(
-    new Date(insights.nextUpdate),
-    { addSuffix: true }
-  );
+  const nextUpdateDistance = formatDistanceToNow(new Date(insights.nextUpdate), {
+    addSuffix: true,
+  });
 
   return (
     <div className="space-y-6">
+      {/* Last Update Badge */}
       <div className="flex justify-between items-center">
         <Badge variant="outline">Last updated: {lastUpdatedDate}</Badge>
       </div>
 
-      {/* Market Overview Cards */}
+      {/* Market Overview Section - Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Market Outlook Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -96,6 +88,7 @@ const DashboardView = ({ insights }) => {
           </CardContent>
         </Card>
 
+        {/* Industry Growth Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -111,6 +104,7 @@ const DashboardView = ({ insights }) => {
           </CardContent>
         </Card>
 
+        {/* Demand Level Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Demand Level</CardTitle>
@@ -126,6 +120,7 @@ const DashboardView = ({ insights }) => {
           </CardContent>
         </Card>
 
+        {/* Top Skills Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Top Skills</CardTitle>
@@ -143,7 +138,7 @@ const DashboardView = ({ insights }) => {
         </Card>
       </div>
 
-      {/* Salary Ranges Chart */}
+      {/* Salary Visualization Section */}
       <Card className="col-span-4">
         <CardHeader>
           <CardTitle>Salary Ranges by Role</CardTitle>
@@ -184,8 +179,9 @@ const DashboardView = ({ insights }) => {
         </CardContent>
       </Card>
 
-      {/* Industry Trends */}
+      {/* Industry Insights Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Key Trends Card */}
         <Card>
           <CardHeader>
             <CardTitle>Key Industry Trends</CardTitle>
@@ -205,6 +201,7 @@ const DashboardView = ({ insights }) => {
           </CardContent>
         </Card>
 
+        {/* Recommended Skills Card */}
         <Card>
           <CardHeader>
             <CardTitle>Recommended Skills</CardTitle>

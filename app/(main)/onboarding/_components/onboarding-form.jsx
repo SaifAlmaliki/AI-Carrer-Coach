@@ -21,16 +21,7 @@ const OnboardingForm = ({ industries }) => {
   const [selectedIndustry, setSelectedIndustry] = useState(null);
 
   const { loading: updateLoading, fn: updateUserFn, data: updateResult} = useFetch(updateUser);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm({
-    resolver: zodResolver(onboardingSchema),
-  });
+  const {register, handleSubmit, formState: { errors }, setValue, watch } = useForm({ resolver: zodResolver(onboardingSchema) });
 
   const onSubmit = async (values) => {
     try {
@@ -60,6 +51,7 @@ const OnboardingForm = ({ industries }) => {
   return (
     <div className="flex items-center justify-center bg-background">
       <Card className="w-full max-w-lg mt-10 mx-2">
+        {/* Card Header Section */}
         <CardHeader>
           <CardTitle className="gradient-title text-4xl">
             Complete Your Profile
@@ -69,6 +61,7 @@ const OnboardingForm = ({ industries }) => {
             recommendations.
           </CardDescription>
         </CardHeader>
+        {/* Card Content Section: Form */}
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
@@ -133,14 +126,7 @@ const OnboardingForm = ({ industries }) => {
 
             <div className="space-y-2">
               <Label htmlFor="experience">Years of Experience</Label>
-              <Input
-                id="experience"
-                type="number"
-                min="0"
-                max="50"
-                placeholder="Enter years of experience"
-                {...register("experience")}
-              />
+              <Input id="experience" type="number" min="0" max="50" placeholder="Enter years of experience" {...register("experience")} />
               {errors.experience && (
                 <p className="text-sm text-red-500">
                   {errors.experience.message}
