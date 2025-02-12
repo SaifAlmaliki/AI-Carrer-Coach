@@ -1,6 +1,8 @@
+'use server';
+
 // Import required dependencies
 import { db } from "@/lib/prisma";          // Database connection
-import { auth } from "@clerk/nextjs/server"; // Authentication
+import { auth } from "@clerk/nextjs/server";  // Authentication
 import { GoogleGenerativeAI } from "@google/generative-ai"; // AI model for generating questions
 
 // Initialize Google's Generative AI with API key
@@ -9,7 +11,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 // Function to generate quiz questions based on user's industry and skills
-export async function generateQuiz() {
+export async function generateQuiz(quizType = ["technical"]) {
   // Authenticate user and get their ID
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
@@ -25,15 +27,27 @@ export async function generateQuiz() {
 
   if (!user) throw new Error("User not found");
 
+  // Define question types and their prompts
+  const questionTypes = {
+    technical: `technical interview questions focusing on ${user.industry} skills${
+      user.skills?.length ? ` and expertise in ${user.skills.join(", ")}` : ""
+    }`,
+    behavioral: `behavioral interview questions about past experiences, problem-solving, and work style in the ${user.industry} field`,
+    leadership: `leadership and management interview questions about team handling, decision making, and project management in ${user.industry}`,
+  };
+
+  const type = quizType[0]; // Get the single selected type
+  const questionType = questionTypes[type];
+
   // Construct prompt for AI model to generate relevant questions
-  const prompt = `Generate 10 multiple-choice technical interview questions for a ${user.industry} professional${
-        user.skills?.length ? ` with expertise in ${user.skills.join(", ")}` : ""
-      }.
+  const prompt = `Generate 10 ${questionType}.
 
       Each question must:
-      - Be relevant to ${user.industry} and align with ${user.skills?.length ? `${user.skills.join(", ")}` : "general industry knowledge"}.
-      - Include four answer choices, with only one correct answer.
-      - Be designed to assess practical knowledge, problem-solving skills, or theoretical understanding.
+      - Be relevant to ${user.industry}
+      - Include four answer choices, with only one correct answer
+      - ${type === 'technical' ? 'Focus on practical knowledge and problem-solving' : ''}
+      - ${type === 'behavioral' ? 'Focus on past experiences and situation handling' : ''}
+      - ${type === 'leadership' ? 'Focus on team management and decision making' : ''}
 
       Provide the response strictly in the following JSON format, without any additional text or explanations outside of the JSON:
       {
@@ -42,7 +56,8 @@ export async function generateQuiz() {
             "question": "string",
             "options": ["string", "string", "string", "string"],
             "correctAnswer": "string",
-            "explanation": "string"
+            "explanation": "string",
+            "type": "${type}"
           }
         ]
       }
@@ -84,74 +99,81 @@ export async function saveQuizResult(questions, answers, score) {
 
   if (!user) throw new Error("User not found");
 
-  // Map questions and user answers to create detailed results
+  // Get the category based on question types
+  const getCategory = (questions) => {
+    const types = [...new Set(questions.map(q => q.type))];
+    if (types.length === 1) {
+      return types[0].charAt(0).toUpperCase() + types[0].slice(1); // Capitalize single type
+    }
+    return types.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(' & '); // Combine multiple types
+  };
+
+  // Create question results with detailed information
   const questionResults = questions.map((q, index) => ({
     question: q.question,
-    answer: q.correctAnswer,
+    options: q.options,
+    correctAnswer: q.correctAnswer,
     userAnswer: answers[index],
     isCorrect: q.correctAnswer === answers[index],
     explanation: q.explanation,
+    type: q.type,
   }));
 
   // Filter out wrong answers for improvement tips
   const wrongAnswers = questionResults.filter((q) => !q.isCorrect);
 
-  let improvementTip = null;
+  let improvementTip = "";
   if (wrongAnswers.length > 0) {
-    // Format wrong answers for the AI prompt
+    // Format wrong answers for the prompt
     const wrongQuestionsText = wrongAnswers
       .map(
-        (q) =>
-          `Question: "${q.question}"\nCorrect Answer: "${q.answer}"\nUser Answer: "${q.userAnswer}"`
+        (q) => `Question: ${q.question}\nCorrect Answer: ${q.correctAnswer}\nExplanation: ${q.explanation}`
       )
       .join("\n\n");
 
     // Generate improvement tip based on wrong answers
-    const improvementPrompt = `The user answered the following ${user.industry} technical interview questions incorrectly:
+    const improvementPrompt = `The user answered the following ${user.industry} interview questions incorrectly:
 
         ${wrongQuestionsText}
 
-        Based on these mistakes, provide a concise and actionable improvement tip that directly addresses the user's knowledge gaps.
-
-        Guidelines:
-        - Focus on what the user should learn or practice rather than pointing out errors.
-        - Keep the response brief (under 2 sentences) and constructive.
-        - Use an encouraging tone to motivate improvement.
-        - Ensure the tip is specific, relevant, and practical.
+        Based on these mistakes, provide 3-4 specific, actionable tips for improvement.
+        Format your response as a numbered list without any markdown formatting (no asterisks).
+        Each tip should:
+        1. Start with a clear action item
+        2. Include specific examples or methods
+        3. Suggest relevant resources
+        4. Be separated by line breaks for readability
 
         Example format:
-        "To strengthen your understanding of [topic], focus on [specific concept or practice method]. Keep practicing [related task] to reinforce this knowledge."
+        1. Practice Technical Communication: Work on explaining complex concepts clearly. Use analogies and simple examples. Resources: Technical writing courses on Coursera.
 
-        Do not include any additional commentary—only return the improvement tip.
-      `;
+        2. Improve Problem Analysis: Develop a systematic approach to breaking down problems. Practice whiteboarding solutions before coding. Resources: LeetCode problem-solving guides.
 
-    try {
-      const tipResult = await model.generateContent(improvementPrompt);
-      improvementTip = tipResult.response.text().trim();
-      console.log(improvementTip);
-    } catch (error) {
-      console.error("Error generating improvement tip:", error);
-      // Continue without improvement tip if generation fails
-    }
+        Keep each tip concise and actionable.`;
+
+    const result = await model.generateContent(improvementPrompt);
+    improvementTip = result.response.text()
+      .replace(/\*\*/g, '') // Remove all asterisks
+      .trim();
   }
 
-  try {
-    // Save Quiz results to database
-    const assessment = await db.assessment.create({
-      data: {
-        userId: user.id,
-        quizScore: score,
-        questions: questionResults,
-        category: "Technical",
-        improvementTip,
-      },
-    });
+  // Calculate score as percentage
+  const scorePercentage = Math.round(
+    (questionResults.filter((q) => q.isCorrect).length / questions.length) * 100
+  );
 
-    return assessment;
-  } catch (error) {
-    console.error("Error saving quiz result:", error);
-    throw new Error("Failed to save quiz result");
-  }
+  // Save assessment to database
+  const assessment = await db.assessment.create({
+    data: {
+      userId: user.id,
+      quizScore: scorePercentage,
+      questions: questionResults,
+      category: getCategory(questions),
+      improvementTip,
+    },
+  });
+
+  return assessment;
 }
 
 // Function to retrieve user's assessment history

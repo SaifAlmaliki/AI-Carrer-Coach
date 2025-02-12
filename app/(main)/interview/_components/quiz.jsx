@@ -21,20 +21,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { generateQuiz, saveQuizResult } from "@/actions/interview";
 import QuizResult from "./quiz-result";
 import useFetch from "@/hooks/use-fetch";
 import { BarLoader } from "react-spinners";
+import QuizTypeSelector from "./quiz-type-selector";
+
+// Import server actions
+import { generateQuiz as generateQuizAction, saveQuizResult as saveQuizResultAction } from "@/actions/interview";
 
 export default function Quiz() {
   // State management for quiz progression and user interactions
   const [currentQuestion, setCurrentQuestion] = useState(0);      // Tracks current question index
   const [answers, setAnswers] = useState([]);                     // Stores user's answers
   const [showExplanation, setShowExplanation] = useState(false);  // Controls explanation visibility
+  const [selectedType, setSelectedType] = useState("technical");  // Stores selected quiz type
+  const [quizStarted, setQuizStarted] = useState(false);          // Tracks whether the quiz has started
 
-  // Custom hooks for handling async operations
-  const { loading: generatingQuiz, fn: generateQuizFn, data: quizData } = useFetch(generateQuiz);
-  const { loading: savingResult, fn: saveQuizResultFn, data: resultData, setData: setResultData } = useFetch(saveQuizResult);
+  // Custom hooks for handling async operations with server actions
+  const { loading: generatingQuiz, fn: generateQuizFn, data: quizData } = useFetch(
+    () => generateQuizAction([selectedType])
+  );
+  const { loading: savingResult, fn: saveQuizResultFn, data: resultData, setData: setResultData } = useFetch(
+    (questions, answers, score) => saveQuizResultAction(questions, answers, score)
+  );
 
   // Initialize answers array when quiz data is loaded
   useEffect(() => {
@@ -42,6 +51,19 @@ export default function Quiz() {
       setAnswers(new Array(quizData.length).fill(null));
     }
   }, [quizData]);
+
+  const handleTypeChange = (type) => {
+    setSelectedType(type);
+  };
+
+  const startQuiz = async () => {
+    try {
+      await generateQuizFn();
+      setQuizStarted(true);
+    } catch (error) {
+      toast.error("Failed to generate quiz questions");
+    }
+  };
 
   // Handler for when user selects an answer
   const handleAnswer = (answer) => {
@@ -106,7 +128,7 @@ export default function Quiz() {
   }
 
   // Initial quiz start screen
-  if (!quizData) {
+  if (!quizStarted) {
     return (
       <Card className="mx-2">
         <CardHeader>
@@ -117,9 +139,13 @@ export default function Quiz() {
             This quiz contains 10 questions specific to your industry and
             skills. Take your time and choose the best answer for each question.
           </p>
+          <QuizTypeSelector
+            type={selectedType}
+            onTypeChange={handleTypeChange}
+          />
         </CardContent>
         <CardFooter>
-          <Button onClick={generateQuizFn} className="w-full">
+          <Button onClick={startQuiz} className="w-full">
             Start Quiz
           </Button>
         </CardFooter>

@@ -28,9 +28,11 @@ export default function QuizResult({
 
         {/* Improvement Tip */}
         {result.improvementTip && (
-          <div className="bg-muted p-4 rounded-lg">
-            <p className="font-medium">Improvement Tip:</p>
-            <p className="text-muted-foreground">{result.improvementTip}</p>
+          <div className="bg-muted p-4 rounded-lg space-y-2">
+            <h3 className="font-medium">Areas for Improvement:</h3>
+            <div className="text-muted-foreground whitespace-pre-line">
+              {result.improvementTip}
+            </div>
           </div>
         )}
 
