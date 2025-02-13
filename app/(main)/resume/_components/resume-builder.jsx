@@ -1,16 +1,19 @@
+/**
+ * A comprehensive resume builder that allows users to create, edit, and download their resume.
+ * Features include:
+ * - Form-based resume creation with sections for contact info, summary, skills, experience, education, and projects
+ * - Live markdown preview
+ * - PDF download functionality
+ * - Auto-save capability
+ * - Form validation using Zod schema
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  AlertTriangle,
-  Download,
-  Edit,
-  Loader2,
-  Monitor,
-  Save,
-} from "lucide-react";
+import { AlertTriangle, Download, Edit, Loader2, Monitor, Save } from "lucide-react";
 import { toast } from "sonner";
 import MDEditor from "@uiw/react-md-editor";
 import { Button } from "@/components/ui/button";
@@ -23,21 +26,16 @@ import useFetch from "@/hooks/use-fetch";
 import { useUser } from "@clerk/nextjs";
 import { entriesToMarkdown } from "@/app/lib/helper";
 import { resumeSchema } from "@/app/lib/schema";
-import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 
 export default function ResumeBuilder({ initialContent }) {
+  // State management for active tab and preview content
   const [activeTab, setActiveTab] = useState("edit");
   const [previewContent, setPreviewContent] = useState(initialContent);
   const { user } = useUser();
   const [resumeMode, setResumeMode] = useState("preview");
 
-  const {
-    control,
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm({
+  // Initialize form with validation schema and default values
+  const { control, register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(resumeSchema),
     defaultValues: {
       contactInfo: {},
@@ -49,16 +47,13 @@ export default function ResumeBuilder({ initialContent }) {
     },
   });
 
-  const {
-    loading: isSaving,
-    fn: saveResumeFn,
-    data: saveResult,
-    error: saveError,
-  } = useFetch(saveResume);
+  // Custom hook for handling resume save operations
+  const { loading: isSaving, fn: saveResumeFn, data: saveResult, error: saveError } = useFetch(saveResume);
 
-  // Watch form fields for preview updates
+  // Watch form values for live preview updates
   const formValues = watch();
 
+  // Set initial tab to preview if content exists
   useEffect(() => {
     if (initialContent) setActiveTab("preview");
   }, [initialContent]);
@@ -71,7 +66,7 @@ export default function ResumeBuilder({ initialContent }) {
     }
   }, [formValues, activeTab]);
 
-  // Handle save result
+  // Handle save operation feedback
   useEffect(() => {
     if (saveResult && !isSaving) {
       toast.success("Resume saved successfully!");
@@ -81,21 +76,29 @@ export default function ResumeBuilder({ initialContent }) {
     }
   }, [saveResult, saveError, isSaving]);
 
+  // Generates the markdown for the contact information section of the resume
   const getContactMarkdown = () => {
+    // Extract contact information from the form values
     const { contactInfo } = formValues;
-    const parts = [];
-    if (contactInfo.email) parts.push(`📧 ${contactInfo.email}`);
-    if (contactInfo.mobile) parts.push(`📱 ${contactInfo.mobile}`);
-    if (contactInfo.linkedin)
-      parts.push(`💼 [LinkedIn](${contactInfo.linkedin})`);
-    if (contactInfo.twitter) parts.push(`🐦 [Twitter](${contactInfo.twitter})`);
 
+    // Initialize array to store contact details that will be displayed
+    const parts = [];
+
+    // Only add contact information if it exists
+    // Each piece of information is formatted as "Label: Value"
+    if (contactInfo.email) parts.push(`Email: ${contactInfo.email}`);
+    if (contactInfo.mobile) parts.push(`Mobile: ${contactInfo.mobile}`);
+    if (contactInfo.linkedin) parts.push(`LinkedIn: ${contactInfo.linkedin}`);
+    if (contactInfo.twitter) parts.push(`Twitter: ${contactInfo.twitter}`);
+
+    // Return formatted markdown only if there's at least one contact detail
     return parts.length > 0
       ? `## <div align="center">${user.fullName}</div>
         \n\n<div align="center">\n\n${parts.join(" | ")}\n\n</div>`
       : "";
   };
 
+  // Combine all sections into markdown format
   const getCombinedContent = () => {
     const { summary, skills, experience, education, projects } = formValues;
     return [
@@ -110,11 +113,14 @@ export default function ResumeBuilder({ initialContent }) {
       .join("\n\n");
   };
 
+  // PDF generation state and function
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generatePDF = async () => {
     setIsGenerating(true);
     try {
+      // Dynamically import html2pdf only on the client side
+      const html2pdf = (await import('html2pdf.js')).default;
       const element = document.getElementById("resume-pdf");
       const opt = {
         margin: [15, 15],
@@ -127,19 +133,20 @@ export default function ResumeBuilder({ initialContent }) {
       await html2pdf().set(opt).from(element).save();
     } catch (error) {
       console.error("PDF generation error:", error);
+      toast.error("Failed to generate PDF. Please try again.");
     } finally {
       setIsGenerating(false);
     }
   };
 
+  // Form submission handler
   const onSubmit = async (data) => {
     try {
       const formattedContent = previewContent
-        .replace(/\n/g, "\n") // Normalize newlines
-        .replace(/\n\s*\n/g, "\n\n") // Normalize multiple newlines to double newlines
+        .replace(/\n/g, "\n")
+        .replace(/\n\s*\n/g, "\n\n")
         .trim();
 
-      console.log(previewContent, formattedContent);
       await saveResumeFn(previewContent);
     } catch (error) {
       console.error("Save error:", error);
@@ -153,11 +160,7 @@ export default function ResumeBuilder({ initialContent }) {
           Resume Builder
         </h1>
         <div className="space-x-2">
-          <Button
-            variant="destructive"
-            onClick={handleSubmit(onSubmit)}
-            disabled={isSaving}
-          >
+          <Button variant="destructive" onClick={handleSubmit(onSubmit)} disabled={isSaving} >
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -389,11 +392,18 @@ export default function ResumeBuilder({ initialContent }) {
             <div className="flex p-3 gap-2 items-center border-2 border-yellow-600 text-yellow-600 rounded mb-2">
               <AlertTriangle className="h-5 w-5" />
               <span className="text-sm">
-                You will lose editied markdown if you update the form data.
+                You will lose edited markdown if you update the form data.
               </span>
             </div>
           )}
+          {/* Markdown Editor Container */}
           <div className="border rounded-lg">
+            {/* MDEditor component for editing and previewing markdown content
+                - value: Current markdown content
+                - onChange: Updates content when edited
+                - height: Fixed height for the editor
+                - preview: Mode can be 'edit', 'preview', or 'live'
+                  (controlled by resumeMode state) */}
             <MDEditor
               value={previewContent}
               onChange={setPreviewContent}
@@ -401,8 +411,16 @@ export default function ResumeBuilder({ initialContent }) {
               preview={resumeMode}
             />
           </div>
+
+          {/* Hidden container for PDF generation
+              This div is not visible but contains the formatted content
+              that will be converted to PDF when downloading */}
           <div className="hidden">
             <div id="resume-pdf">
+              {/* MDEditor.Markdown component renders the markdown as HTML
+                  - source: Markdown content to render
+                  - style: Custom styling for PDF output
+                    (white background and black text for better printing) */}
               <MDEditor.Markdown
                 source={previewContent}
                 style={{
