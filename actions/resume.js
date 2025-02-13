@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 // Initialize Google's Generative AI with API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Configure the model to use Gemini 1.5 Flash for optimal performance
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 
 // Saves or updates a user's resume content in the database

@@ -8,7 +8,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai"; // AI model for gene
 // Initialize Google's Generative AI with API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Set up the model to use Gemini 1.5 Flash
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // Function to generate quiz questions based on user's industry and skills
 export async function generateQuiz(quizType = ["technical"]) {

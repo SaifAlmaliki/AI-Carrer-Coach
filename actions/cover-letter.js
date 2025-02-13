@@ -14,7 +14,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Google's Generative AI with API key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Use Gemini 2.0 model for improved generation capabilities
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 export async function generateCoverLetter(data) {
   const { userId } = await auth();
